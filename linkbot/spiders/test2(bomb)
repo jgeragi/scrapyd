@@ -1,0 +1,36 @@
+import urlparse
+import re
+from scrapy.contrib.spiders import CrawlSpider, Rule
+from scrapy.selector import Selector
+from scrapy.contrib.linkextractors.sgml import SgmlLinkExtractor
+from linkbot.items import LinkbotItem
+
+
+class LinkSpider(CrawlSpider):
+    name = 'links'
+    allowed_domains = ['bombardier.com']
+    start_urls = ['http://jobs.bombardier.com/key/bombardier-careers-taleo-jobs.html']  
+    REDIRECT_MAX_TIMES = 3
+    COOKIES_ENABLED = False
+    AUTOTHROTTLE_ENABLED = False
+    CONCURRENT_REQUESTS = 600
+    RETRY_ENABLED = False
+    DOWNLOAD_TIMEOUT = 10
+    DOWNLOAD_DELAY = 0.10
+    
+    rules = (
+		Rule(SgmlLinkExtractor(restrict_xpaths=('//span[@class="jobTitle"]/a')),follow=True,callback='parse_html'),
+                Rule(SgmlLinkExtractor(restrict_xpaths=('//span[@class="pagination-links"]/a')),follow=True,callback='parse_html'),
+                Rule(SgmlLinkExtractor(allow_domains='jobs.bombardier.com'),follow=True,callback='parse_html'),
+                #Rule(SgmlLinkExtractor(restrict_xpaths=('//body')),follow=True,callback='parse_html'),
+	    )
+        
+    def parse_html(self, response):
+        sel = Selector(response)
+        links = re.findall(r'(https?://jobs.bombardier.com/job\S+)', response.url)
+        item = LinkbotItem(
+            page_links=links,
+            )
+        yield item
+
+
